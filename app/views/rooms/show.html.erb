@@ -1,0 +1,114 @@
+<h1>
+  <%= @room.name %>
+</h1>
+test
+<div class="row">
+  <div class="col-12 col-md-3">
+    <%= render partial: 'rooms' %>
+  </div>
+
+  <div class="col">
+    <div class="chat" data-channel-subscribe="room" data-room-id="<%= @room.id %>">
+      <% @room_messages.each do |room_message| %>
+        <div class="chat-message-container">
+          <div class="row no-gutters">
+            <div class="col-auto text-center">
+              <img src="<%= room_message.user.gravatar_url %>" class="avatar" alt="No image">
+              
+              <div data-role="user-name"><%= room_message.user.username %></div>
+            </div>
+
+            <div class="col">
+              <div class="message-content">
+                <p class="mb-1">
+                  <%= room_message.message %>
+                </p>
+
+                <div class="text-right">
+                  <small>
+                    <%= room_message.created_at %>
+                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <%= simple_form_for @room_message, remote: true do |form| %>
+      <div class="input-group mb-3">
+        <%= form.input :message, as: :string,
+                                 wrapper: false,
+                                 label: false,
+                                 input_html: {
+                                   class: 'chat-input'
+                                 } %>
+        <div class="input-group-append">
+          <%= form.submit "Send", class: 'btn btn-primary chat-input' %>
+        </div>
+      </div>
+
+      <%= form.input :room_id, as: :hidden %>
+    <% end %>
+  </div>
+</div>
+
+<div class="d-none" data-role="message-template">
+  <div class="chat-message-container">
+    <div class="row no-gutters">
+      <div class="col-auto text-center">
+        <img src="" class="avatar" alt="" data-role="user-avatar">
+        <div data-role="user-name"></div>
+      </div>
+
+      <div class="col">
+        <div class="message-content">
+          <p class="mb-1" data-role="message-text"></p>
+
+          <div class="text-right">
+            <small data-role="message-date"></small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+
+$(function() {
+    let user = <%= current_user.to_json.html_safe %>;
+    console.log(user.username)
+
+    $('[data-channel-subscribe="room"]').each(function(index, element) {
+      var $element = $(element),
+          room_id = $element.data('room-id')
+          messageTemplate = $('[data-role="message-template"]');
+  
+      $element.animate({ scrollTop: $element.prop("scrollHeight")}, 1000)        
+  
+      App.cable.subscriptions.create(
+        {
+          channel: "RoomChannel",
+          room: room_id
+        },
+        {
+          received: function(data) {
+            var content = messageTemplate.children().clone(true, true);
+            console.log(data)
+            content.find('[data-role="user-avatar"]').attr('src', data.user_avatar_url);
+            content.find('[data-role="user-name"]').text(user.username);
+            content.find('[data-role="message-text"]').text(data.message);
+            content.find('[data-role="message-date"]').text(data.updated_at);
+            // content.find('[data-role="message-date"]').text(data.updated_at);
+            $element.append(content);
+            $element.animate({ scrollTop: $element.prop("scrollHeight")}, 1000);
+          }
+        }
+      );
+    });
+  });
+</script>
